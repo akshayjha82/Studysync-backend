@@ -662,4 +662,7 @@ app.post("/submit-quiz", async (req, res) => {
 
 
 const PORT =  5000;
+app.get("/", (req, res) => {
+    res.send("StudySync API is running!");
+  });
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
