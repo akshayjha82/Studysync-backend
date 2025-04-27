@@ -54,11 +54,11 @@ app.use(express.json());
 
 // PostgreSQL connection setup
 const pool = new Pool({
-    user: import.meta.env.VITE_USER || "postgres",
-    host: import.meta.env.VITE_HOST || "localhost",
-    database: import.meta.env.VITE_DATABASE || "postgres",
-    password: import.meta.env.VITE_PASSWORD || "Akshay2407@", 
-    port: import.meta.env.VITE_PORT || 5000
+    user:  "postgres",
+    host: "localhost",
+    database:  "postgres",
+    password:  "Akshay2407@", 
+    port: 5000
 });
 
 
