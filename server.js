@@ -58,7 +58,8 @@ const pool = new Pool({
     host: "sonembrdaohcyyurmfhq.supabase.co",
     database:  "postgres",
     password:  "Akshay2407@", 
-    port: 5432
+    port: 5432,
+    ssl: { rejectUnauthorized: false }
 });
 
 
