@@ -8,10 +8,10 @@ import { createServer } from "http";
 import fs from 'fs';
 import pkg from "pg";
 import multer from "multer";
+import { extractTextFromPDF } from './extractTextFromPDF.js';
+import { summarizeText } from './summarizer.js';
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
-// import pdfParse from 'pdf-parse';
-// import { pipeline } from '@xenova/transformers';
 
 dotenv.config();
 const { Pool } = pkg;
@@ -56,6 +56,7 @@ app.use(express.json());
 const pool = new Pool({
     user:  "postgres",
     host: "db.sonembrdaohcyyurmfhq.supabase.co",
+    // host: "localhost",
     database:  "postgres",
     password:  "Akshay2407@", 
     port: 5432,
@@ -294,6 +295,59 @@ app.get("/group-preferred-study-time/:email", async (req, res) => {
 
 // ✅ **Update Profile & Assign Group Automatically**
 
+// app.post('/upload', upload.single('file'), async (req, res) => {
+//     try {
+//         if (!req.file) return res.status(400).json({ error: 'File not uploaded' });
+
+//         const fileUrl = `http://localhost:5000/uploads/${req.file.filename}`;
+//         const { group, sender } = req.body;
+//         if (!group || !sender) return res.status(400).json({ error: 'Missing group or sender' });
+
+//         let summary = null;
+//         const createdAt = new Date().toISOString();
+
+//         // Save initial message without summary
+//         const insertResult = await pool.query(
+//             'INSERT INTO messages (group_id, sender, message, summary, created_at) VALUES ($1, $2, $3, NULL, $4) RETURNING id',
+//             [group, sender, fileUrl, createdAt]
+//         );
+
+//         const messageId = insertResult.rows[0].id;
+
+//         // Emit message immediately (without summary)
+//         const newMessage = { id: messageId, groupId: group, sender, message: fileUrl, summary: null, created_at: createdAt };
+//         io.to(group).emit("message", newMessage);
+
+//         // If it's a PDF, process asynchronously
+//         // if (req.file.mimetype === 'application/pdf') {
+//         //     setTimeout(async () => {
+//         //         try {
+//         //             const pdfData = await pdfParse(fs.readFileSync(req.file.path));
+//         //             const extractedText = pdfData.text;
+//         //             if (extractedText.length > 50) {
+//         //                 summary = await summarizeText(extractedText);
+//         //             }
+
+//         //             // Update database with summary
+//         //             await pool.query('UPDATE messages SET summary = $1 WHERE id = $2', [summary, messageId]);
+
+//         //             // Emit updated message with summary
+//         //             io.to(group).emit("message", { ...newMessage, summary });
+
+//         //         } catch (error) {
+//         //             console.error("Error processing PDF:", error);
+//         //         }
+//         //     }, 500);
+//         // }
+
+//         res.json({ fileUrl });
+
+//     } catch (error) {
+//         console.error('File upload error:', error);
+//         res.status(500).json({ error: 'Server error' });
+//     }
+// });
+
 app.post('/upload', upload.single('file'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'File not uploaded' });
@@ -314,30 +368,41 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         const messageId = insertResult.rows[0].id;
 
         // Emit message immediately (without summary)
-        const newMessage = { id: messageId, groupId: group, sender, message: fileUrl, summary: null, created_at: createdAt };
+        const newMessage = {
+            id: messageId,
+            groupId: group,
+            sender,
+            message: fileUrl,
+            summary: null,
+            created_at: createdAt
+        };
         io.to(group).emit("message", newMessage);
 
-        // If it's a PDF, process asynchronously
-        // if (req.file.mimetype === 'application/pdf') {
-        //     setTimeout(async () => {
-        //         try {
-        //             const pdfData = await pdfParse(fs.readFileSync(req.file.path));
-        //             const extractedText = pdfData.text;
-        //             if (extractedText.length > 50) {
-        //                 summary = await summarizeText(extractedText);
-        //             }
+        // If it's a PDF, extract and summarize in the background
+        if (req.file.mimetype === 'application/pdf') {
+            setTimeout(async () => {
+                try {
+                    const pdfPath = path.resolve(req.file.path);
+                    const extractedText = await extractTextFromPDF(pdfPath);
 
-        //             // Update database with summary
-        //             await pool.query('UPDATE messages SET summary = $1 WHERE id = $2', [summary, messageId]);
+                    if (extractedText.length > 50) {
+                        summary = await summarizeText(extractedText);
+                    }
 
-        //             // Emit updated message with summary
-        //             io.to(group).emit("message", { ...newMessage, summary });
+                    // Update DB with summary
+                    await pool.query(
+                        'UPDATE messages SET summary = $1 WHERE id = $2',
+                        [summary, messageId]
+                    );
 
-        //         } catch (error) {
-        //             console.error("Error processing PDF:", error);
-        //         }
-        //     }, 500);
-        // }
+                    // Emit updated message with summary
+                    io.to(group).emit("message", { ...newMessage, summary });
+
+                } catch (error) {
+                    console.error("Error processing PDF:", error);
+                }
+            }, 500);
+        }
 
         res.json({ fileUrl });
 
