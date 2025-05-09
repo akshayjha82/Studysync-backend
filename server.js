@@ -22,7 +22,7 @@ const io = new Server(server,
      { 
         cors: 
         { 
-            origin: ["http://localhost:5173", "https://studysync-frontend.vercel.app"],
+            origin: ["https://studysync-frontend.vercel.app"],
             methods: ["GET", "POST"] 
         } 
     });
@@ -49,16 +49,19 @@ const upload = multer({  storage });
 app.use("/uploads", express.static(uploadDir));
 
 
-app.use(cors());
+app.use(cors({
+    origin: ["https://studysync-frontend.vercel.app"],
+    credentials: true
+  }));
 app.use(express.json());
 
 // PostgreSQL connection setup
 const pool = new Pool({
-    user:  "postgres",
-    host: "db.sonembrdaohcyyurmfhq.supabase.co",
+    user:  "studysync_database_1n0h_user",
+    host: "dpg-d0f0k7mmcj7s738b8pcg-a.render.com",
     // host: "localhost",
-    database:  "postgres",
-    password:  "Akshay2407@", 
+    database:  "studysync_database_1n0h",
+    password:  "eHcOQZ591oTqiQEoFXpbU4cGOoGDkT7Q", 
     port: 5432,
     ssl: { rejectUnauthorized: false }
 });
